@@ -13,7 +13,7 @@
     namespaceSelector: null,
     prefixedNamespaceSelector: if self.namespaceSelector != null then self.namespaceSelector + ',' else '',
     hostNetworkInterfaceSelector: 'device!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)"',
-    hostMountpointSelector: 'mountpoint="/"',
+    hostMountpointSelector: 'mountpoint="/etc/hosts"',
 
     // We build alerts for the presence of all these jobs.
     jobs: {
