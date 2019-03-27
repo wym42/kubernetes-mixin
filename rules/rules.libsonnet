@@ -210,6 +210,196 @@
               ) by (node)
             ||| % $._config,
           },
+          {
+            record: 'node:load1:ratio',
+            expr: |||
+              sum by (node) (node_load1{%(nodeExporterSelector)s} * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:) / node:node_num_cpu:sum
+            ||| % $._config,
+          },
+          {
+            record: 'node:load5:ratio',
+            expr: |||
+              sum by (node) (node_load5{%(nodeExporterSelector)s} * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:) / node:node_num_cpu:sum
+            ||| % $._config,
+          },
+          {
+            record: 'node:load15:ratio',
+            expr: |||
+              sum by (node) (node_load15{%(nodeExporterSelector)s} * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:) / node:node_num_cpu:sum
+            ||| % $._config,
+          },
+          {
+            record: 'node:pod_count:sum',
+            expr: |||
+              sum by (node) ((kube_pod_status_scheduled{%(kubeStateMetricsSelector)s, condition="true"} > 0)  * on (namespace, pod) group_left(node) kube_pod_info unless on (node) (kube_node_status_condition{%(kubeStateMetricsSelector)s, condition="Ready", status=~"unknown|false"} > 0))
+            ||| % $._config,
+          },
+          {
+            record: 'node:pod_utilization:ratio',
+            expr: |||
+              (sum(kube_pod_info) by (node) / sum(kube_node_status_capacity_pods) by (node)) unless on (node) (kube_node_status_condition{%(kubeStateMetricsSelector)s, condition="Ready", status=~"unknown|false"} > 0)
+            ||| % $._config,
+          },
+          {
+            record: 'node:pod_running:count',
+            expr: |||
+              count(kube_pod_info unless on (pod) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase=~"Failed|Pending|Unknown|Succeeded"} > 0))  by (node) unless on (node) (kube_node_status_condition{%(kubeStateMetricsSelector)s, condition="Ready", status=~"unknown|false"} > 0)
+            ||| % $._config,
+          },
+          {
+            record: 'node:pod_succeeded:count',
+            expr: |||
+              count(kube_pod_info unless on (pod) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase=~"Failed|Pending|Unknown|Running"} > 0))  by (node) unless on (node) (kube_node_status_condition{%(kubeStateMetricsSelector)s, condition="Ready",status=~"unknown|false"} > 0)
+            ||| % $._config,
+          },
+          {
+            record: 'node:pod_abnormal:count',
+            expr: |||
+              count(kube_pod_info unless on (pod) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase=~"Succeeded|Running"} > 0)) by (node) unless on (node) (kube_node_status_condition{%(kubeStateMetricsSelector)s, condition="Ready", status=~"unknown|false"} > 0)
+            ||| % $._config,
+          },
+          {
+            record: 'node:pod_abnormal:ratio',
+            expr: |||
+              node:pod_abnormal:count / node:pod_count:sum
+            ||| % $._config,
+          },
+          {
+            record: 'node:disk_space_available:',
+            expr: |||
+              max(node_filesystem_avail_bytes{device=~"/dev/.+", %(nodeExporterSelector)s} * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:) by (node)
+            ||| % $._config,
+          },
+          {
+            record: 'node:disk_space_utilization:ratio',
+            expr: |||
+              max(((node_filesystem_size_bytes{device=~"/dev/.+", %(nodeExporterSelector)s} - node_filesystem_avail_bytes{device=~"/dev/.+", %(nodeExporterSelector)s}) / node_filesystem_size_bytes{device=~"/dev/.+", %(nodeExporterSelector)s}) * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:) by (node)
+            ||| % $._config,
+          },
+          {
+            record: 'node:disk_inode_utilization:ratio',
+            expr: |||
+              (1 - (node:node_inodes_free: / node:node_inodes_total:))
+            ||| % $._config,
+          },
+        ],
+      },
+      {
+        name: 'cluster.rules',
+        rules: [
+          {
+            record: 'cluster:pod_abnormal:sum',
+            expr: |||
+              count(kube_pod_info unless on (pod) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase=~"Succeeded|Running"} > 0) unless on (node) (kube_node_status_condition{%(kubeStateMetricsSelector)s, condition="Ready",status=~"unknown|false"} > 0))
+            ||| % $._config,
+          },
+          {
+            record: 'cluster:pod:sum',
+            expr: |||
+              sum((kube_pod_status_scheduled{%(kubeStateMetricsSelector)s, condition="true"} > 0)  * on (namespace, pod) group_left(node) (sum by (node, namespace, pod) (kube_pod_info)) unless on (node) (kube_node_status_condition{%(kubeStateMetricsSelector)s, condition="Ready",status=~"unknown|false"} > 0))
+            ||| % $._config,
+          },
+          {
+            record: 'cluster:pod_abnormal:ratio',
+            expr: |||
+              cluster:pod_abnormal:sum / cluster:pod:sum
+            ||| % $._config,
+          },
+          {
+            record: 'cluster:pod_utilization:ratio',
+            expr: |||
+              sum(kube_pod_info unless on (node) (kube_node_status_condition{%(kubeStateMetricsSelector)s, condition="Ready", status=~"unknown|false"} > 0)) / sum(kube_node_status_capacity_pods unless on (node) (kube_node_status_condition{%(kubeStateMetricsSelector)s, condition="Ready", status=~"unknown|false"} > 0))
+            ||| % $._config,
+          },
+          {
+            record: 'cluster:disk_utilization:ratio',
+            expr: |||
+              1 - sum(max(node_filesystem_avail_bytes{device=~"/dev/.+", %(nodeExporterSelector)s} * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:) by (node)) / sum(max(node_filesystem_size_bytes{device=~"/dev/.+", %(nodeExporterSelector)s} * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:) by (node))
+            ||| % $._config,
+          },
+          {
+            record: 'cluster:disk_inode_utilization:ratio',
+            expr: |||
+              1 - sum(node:node_inodes_free:) / sum(node:node_inodes_total:)
+            ||| % $._config,
+          },
+          {
+            record: 'cluster:node_offline:sum',
+            expr: |||
+              sum(kube_node_status_condition{%(kubeStateMetricsSelector)s, condition="Ready", status=~"unknown|false"})
+            ||| % $._config,
+          },
+          {
+            record: 'cluster:node_offline:ratio',
+            expr: |||
+              sum(kube_node_status_condition{%(kubeStateMetricsSelector)s, condition="Ready", status=~"unknown|false"}) / sum(kube_node_status_condition{%(kubeStateMetricsSelector)s, condition="Ready"})
+            ||| % $._config,
+          },
+        ],
+      },
+      {
+        name: 'namespace.rules',
+        rules: [
+          {
+            record: 'namespace:pod_abnormal:ratio',
+            expr: |||
+              (sum(kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase=~"Failed|Pending|Unknown", namespace!=""}) by (namespace) * on (namespace) group_left(label_kubesphere_io_workspace)(kube_namespace_labels)) / (sum(kube_pod_status_phase{%(kubeStateMetricsSelector)s,phase!~"Succeeded", namespace!=""}) by (namespace) * on (namespace) group_left(label_kubesphere_io_workspace)(kube_namespace_labels))
+            ||| % $._config,
+          },
+          {
+            record: 'namespace:resourcequota_used:ratio',
+            expr: |||
+              max(kube_resourcequota{%(kubeStateMetricsSelector)s, type="used"}) by (resource, namespace) / min(kube_resourcequota{%(kubeStateMetricsSelector)s, type="hard"}) by (resource, namespace) *  on (namespace) group_left(label_kubesphere_io_workspace) (kube_namespace_labels)
+            ||| % $._config,
+          },
+          {
+            record: 'namespace:workload_cpu_usage:sum',
+            expr: |||
+              label_join(sum(label_replace(label_replace(label_replace(label_join(label_join(label_replace(sum(irate(container_cpu_usage_seconds_total{job="kubelet", pod_name!="", image!=""}[5m])) by (namespace, pod_name) * on (pod_name) group_left(owner_kind) label_join(label_replace(kube_pod_owner{pod=~".*"}, "owner_kind", "POD", "owner_kind", "<none>"), "pod_name", "", "pod", "_name") , "postfix", "-POD", "owner_kind", "POD"), "pod_name", "", "pod_name", "postfix"), "dist", "-", "owner_kind", "pod_name"), "pod_name", "$1", "dist", "ReplicaSet-(.+)-(.+)"), "workload", "$1", "pod_name", "(.+)-(.+)"), "owner_kind", "Deployment", "owner_kind", "ReplicaSet.*")) by (namespace, workload, owner_kind), "workload", ":", "owner_kind", "workload")
+            ||| % $._config,
+          },
+          {
+            record: 'namespace:workload_memory_usage:sum',
+            expr: |||
+              label_join(sum(label_replace(label_replace(label_replace(label_join(label_join(label_replace(sum(container_memory_usage_bytes{job="kubelet", pod_name!="", image!=""}) by (namespace, pod_name) * on (pod_name) group_left(owner_kind) label_join(label_replace(kube_pod_owner{pod=~".*"}, "owner_kind", "POD", "owner_kind", "<none>"), "pod_name", "", "pod", "_name") , "postfix", "-POD", "owner_kind", "POD"), "pod_name", "", "pod_name", "postfix"), "dist", "-", "owner_kind", "pod_name"), "pod_name", "$1", "dist", "ReplicaSet-(.+)-(.+)"), "workload", "$1", "pod_name", "(.+)-(.+)"), "owner_kind", "Deployment", "owner_kind", "ReplicaSet.*")) by (namespace, workload, owner_kind), "workload", ":", "owner_kind", "workload")
+            ||| % $._config,
+          },
+          {
+            record: 'namespace:workload_memory_usage_wo_cache:sum',
+            expr: |||
+              label_join(sum(label_replace(label_replace(label_replace(label_join(label_join(label_replace(sum(container_memory_usage_bytes{job="kubelet", pod_name!="", image!=""} - container_memory_cache{job="kubelet", pod_name!="", image!=""}) by (namespace, pod_name) * on (pod_name) group_left(owner_kind) label_join(label_replace(kube_pod_owner{pod=~".*"}, "owner_kind", "POD", "owner_kind", "<none>"), "pod_name", "", "pod", "_name") , "postfix", "-POD", "owner_kind", "POD"), "pod_name", "", "pod_name", "postfix"), "dist", "-", "owner_kind", "pod_name"), "pod_name", "$1", "dist", "ReplicaSet-(.+)-(.+)"), "workload", "$1", "pod_name", "(.+)-(.+)"), "owner_kind", "Deployment", "owner_kind", "ReplicaSet.*")) by (namespace, workload, owner_kind), "workload", ":", "owner_kind", "workload")
+            ||| % $._config,
+          },
+          {
+            record: 'namespace:workload_net_bytes_transmitted:sum_irate',
+            expr: |||
+              label_join(sum(label_replace(label_replace(label_replace(label_join(label_join(label_replace(sum(irate(container_network_transmit_bytes_total{pod_name!="", interface!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)", job="kubelet"}[5m])) by (namespace, pod_name) * on (pod_name) group_left(owner_kind) label_join(label_replace(kube_pod_owner{pod=~".*"}, "owner_kind", "POD", "owner_kind", "<none>"), "pod_name", "", "pod", "_name") , "postfix", "-POD", "owner_kind", "POD"), "pod_name", "", "pod_name", "postfix"), "dist", "-", "owner_kind", "pod_name"), "pod_name", "$1", "dist", "ReplicaSet-(.+)-(.+)"), "workload", "$1", "pod_name", "(.+)-(.+)"), "owner_kind", "Deployment", "owner_kind", "ReplicaSet.*")) by (namespace, workload, owner_kind), "workload", ":", "owner_kind", "workload")
+            ||| % $._config,
+          },
+          {
+            record: 'namespace:workload_net_bytes_received:sum_irate',
+            expr: |||
+              label_join(sum(label_replace(label_replace(label_replace(label_join(label_join(label_replace(sum(irate(container_network_receive_bytes_total{pod_name!="", interface!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)", job="kubelet"}[5m])) by (namespace, pod_name) * on (pod_name) group_left(owner_kind) label_join(label_replace(kube_pod_owner{pod=~".*"}, "owner_kind", "POD", "owner_kind", "<none>"), "pod_name", "", "pod", "_name") , "postfix", "-POD", "owner_kind", "POD"), "pod_name", "", "pod_name", "postfix"), "dist", "-", "owner_kind", "pod_name"), "pod_name", "$1", "dist", "ReplicaSet-(.+)-(.+)"), "workload", "$1", "pod_name", "(.+)-(.+)"), "owner_kind", "Deployment", "owner_kind", "ReplicaSet.*")) by (namespace, workload, owner_kind), "workload", ":", "owner_kind", "workload")
+            ||| % $._config,
+          },
+          {
+            record: 'namespace:deployment_unavailable_replicas:ratio',
+            expr: |||
+              sum(kube_deployment_status_replicas_unavailable{%(kubeStateMetricsSelector)s}) by (deployment, namespace) / sum(kube_deployment_spec_replicas{%(kubeStateMetricsSelector)s}) by (deployment, namespace) * on (namespace) group_left(label_kubesphere_io_workspace)(kube_namespace_labels)
+            ||| % $._config,
+          },
+          {
+            record: 'namespace:daemonset_unavailable_replicas:ratio',
+            expr: |||
+              sum(kube_daemonset_status_number_unavailable{%(kubeStateMetricsSelector)s}) by (daemonset, namespace) / sum(kube_daemonset_status_desired_number_scheduled{%(kubeStateMetricsSelector)s}) by (daemonset, namespace) * on (namespace) group_left(label_kubesphere_io_workspace)(kube_namespace_labels)
+            ||| % $._config,
+          },
+          {
+            record: 'namespace:statefulset_unavailable_replicas:ratio',
+            expr: |||
+              (1 - sum(kube_statefulset_status_replicas_current{%(kubeStateMetricsSelector)s}) by (statefulset, namespace) / sum(kube_statefulset_replicas{%(kubeStateMetricsSelector)s}) by (statefulset, namespace)) * on (namespace) group_left(label_kubesphere_io_workspace)(kube_namespace_labels)
+            ||| % $._config,
+          },
         ],
       },
       {
