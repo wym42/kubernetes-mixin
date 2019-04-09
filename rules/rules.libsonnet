@@ -255,7 +255,7 @@
           {
             record: 'node:pod_abnormal:count',
             expr: |||
-              count(kube_pod_info unless on (pod) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase=~"Succeeded|Running"} > 0)) by (node) unless on (node) (kube_node_status_condition{%(kubeStateMetricsSelector)s, condition="Ready", status=~"unknown|false"} > 0)
+              sum (kube_pod_info * on(pod) group_right(node) kube_pod_status_phase{%(kubeStateMetricsSelector)s,phase!~"Succeeded|Running"}) by (node) unless on (node) (kube_node_status_condition{%(kubeStateMetricsSelector)s, condition="Ready", status=~"unknown|false"} > 0)
             ||| % $._config,
           },
           {
