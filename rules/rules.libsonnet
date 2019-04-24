@@ -414,7 +414,7 @@
           {
             record: 'etcd:etcd_server_leader_changes_seen:sum_changes',
             expr: |||
-              sum(changes(etcd_server_leader_changes_seen_total{%(etcdSelector)s}[1h]))
+              sum(label_replace(sum(changes(etcd_server_leader_changes_seen_total{%(etcdSelector)s}[1h])) by (instance), "node", "$1", "instance", "(.*):.*")) by (node)
             ||| % $._config,
           },
           {
