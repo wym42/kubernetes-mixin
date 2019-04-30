@@ -237,31 +237,31 @@
           {
             record: 'node:pod_utilization:ratio',
             expr: |||
-              (sum(kube_pod_info) by (node) / sum(kube_node_status_capacity_pods) by (node)) unless on (node) (kube_node_status_condition{%(kubeStateMetricsSelector)s, condition="Ready", status=~"unknown|false"} > 0)
+              (node:pod_running:count / sum(kube_node_status_capacity_pods) by (node)) unless on (node) (kube_node_status_condition{%(kubeStateMetricsSelector)s, condition="Ready", status=~"unknown|false"} > 0)
             ||| % $._config,
           },
           {
             record: 'node:pod_running:count',
             expr: |||
-              count(kube_pod_info unless on (pod) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase=~"Failed|Pending|Unknown|Succeeded"} > 0))  by (node) unless on (node) (kube_node_status_condition{%(kubeStateMetricsSelector)s, condition="Ready", status=~"unknown|false"} > 0)
+              count(kube_pod_info unless on (pod, namespace) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase=~"Failed|Pending|Unknown|Succeeded"} > 0))  by (node) unless on (node) (kube_node_status_condition{%(kubeStateMetricsSelector)s, condition="Ready", status=~"unknown|false"} > 0)
             ||| % $._config,
           },
           {
             record: 'node:pod_succeeded:count',
             expr: |||
-              count(kube_pod_info unless on (pod) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase=~"Failed|Pending|Unknown|Running"} > 0))  by (node) unless on (node) (kube_node_status_condition{%(kubeStateMetricsSelector)s, condition="Ready",status=~"unknown|false"} > 0)
+              count(kube_pod_info unless on (pod, namespace) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase=~"Failed|Pending|Unknown|Running"} > 0))  by (node) unless on (node) (kube_node_status_condition{%(kubeStateMetricsSelector)s, condition="Ready",status=~"unknown|false"} > 0)
             ||| % $._config,
           },
           {
             record: 'node:pod_abnormal:count',
             expr: |||
-              sum (kube_pod_info * on(pod) group_right(node) kube_pod_status_phase{%(kubeStateMetricsSelector)s,phase!~"Succeeded|Running"}) by (node) unless on (node) (kube_node_status_condition{%(kubeStateMetricsSelector)s, condition="Ready", status=~"unknown|false"} > 0)
+              count(kube_pod_info{node!=""} unless on (pod, namespace) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Succeeded"}>0) unless on (pod, namespace) ((kube_pod_status_ready{%(kubeStateMetricsSelector)s, condition="true"}>0) and on (pod, namespace) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Running"}>0)) unless on (pod, namespace) ((kube_pod_container_status_waiting_reason{%(kubeStateMetricsSelector)s, reason="ContainerCreating"}>0) and on (pod, namespace) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Pending"}>0))) by (node)
             ||| % $._config,
           },
           {
             record: 'node:pod_abnormal:ratio',
             expr: |||
-              node:pod_abnormal:count / node:pod_count:sum
+              (node:pod_abnormal:count / count(kube_pod_info{node!=""} unless on (pod, namespace) kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Succeeded"}>0) by (node)) unless on (node) (kube_node_status_condition{%(kubeStateMetricsSelector)s, condition="Ready", status=~"unknown|false"} > 0)
             ||| % $._config,
           },
           {
@@ -290,7 +290,7 @@
           {
             record: 'cluster:pod_abnormal:sum',
             expr: |||
-              count(kube_pod_info unless on (pod) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase=~"Succeeded|Running"} > 0) unless on (node) (kube_node_status_condition{%(kubeStateMetricsSelector)s, condition="Ready",status=~"unknown|false"} > 0))
+              count(kube_pod_info unless on (pod, namespace) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Succeeded"}>0) unless on (pod, namespace) ((kube_pod_status_ready{%(kubeStateMetricsSelector)s, condition="true"}>0) and on (pod, namespace) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Running"}>0)) unless on (pod, namespace) ((kube_pod_container_status_waiting_reason{%(kubeStateMetricsSelector)s, reason="ContainerCreating"}>0) and on (pod, namespace) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Pending"}>0)))
             ||| % $._config,
           },
           {
@@ -302,13 +302,19 @@
           {
             record: 'cluster:pod_abnormal:ratio',
             expr: |||
-              cluster:pod_abnormal:sum / cluster:pod:sum
+              cluster:pod_abnormal:sum / sum(kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase!="Succeeded"})
+            ||| % $._config,
+          },
+          {
+            record: 'cluster:pod_running:count',
+            expr: |||
+              count(kube_pod_info and on (pod, namespace) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Running"}>0) unless on (node) (kube_node_status_condition{%(kubeStateMetricsSelector)s, condition="Ready", status=~"unknown|false"} > 0))
             ||| % $._config,
           },
           {
             record: 'cluster:pod_utilization:ratio',
             expr: |||
-              sum(kube_pod_info unless on (node) (kube_node_status_condition{%(kubeStateMetricsSelector)s, condition="Ready", status=~"unknown|false"} > 0)) / sum(kube_node_status_capacity_pods unless on (node) (kube_node_status_condition{%(kubeStateMetricsSelector)s, condition="Ready", status=~"unknown|false"} > 0))
+              cluster:pod_running:count / sum(kube_node_status_capacity_pods unless on (node) (kube_node_status_condition{%(kubeStateMetricsSelector)s, condition="Ready", status=~"unknown|false"} > 0))
             ||| % $._config,
           },
           {
@@ -341,9 +347,15 @@
         name: 'namespace.rules',
         rules: [
           {
+            record: 'namespace:pod_abnormal:count',
+            expr: |||
+              count(kube_pod_info{node!=""} unless on (pod, namespace) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Succeeded"}>0) unless on (pod, namespace) ((kube_pod_status_ready{%(kubeStateMetricsSelector)s, condition="true"}>0) and on (pod, namespace) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Running"}>0)) unless on (pod, namespace) ((kube_pod_container_status_waiting_reason{%(kubeStateMetricsSelector)s, reason="ContainerCreating"}>0) and on (pod, namespace) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Pending"}>0))) by (namespace)
+            ||| % $._config,
+          },
+          {
             record: 'namespace:pod_abnormal:ratio',
             expr: |||
-              (sum(kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase=~"Failed|Pending|Unknown", namespace!=""}) by (namespace) * on (namespace) group_left(label_kubesphere_io_workspace)(kube_namespace_labels)) / (sum(kube_pod_status_phase{%(kubeStateMetricsSelector)s,phase!~"Succeeded", namespace!=""}) by (namespace) * on (namespace) group_left(label_kubesphere_io_workspace)(kube_namespace_labels))
+              (namespace:pod_abnormal:count * on (namespace) group_left(label_kubesphere_io_workspace)(kube_namespace_labels)) / (sum(kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase!="Succeeded", namespace!=""}) by (namespace) * on (namespace) group_left(label_kubesphere_io_workspace)(kube_namespace_labels))
             ||| % $._config,
           },
           {
