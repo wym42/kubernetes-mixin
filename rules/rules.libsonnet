@@ -255,7 +255,7 @@
           {
             record: 'node:pod_abnormal:count',
             expr: |||
-              count(kube_pod_info{node!=""} unless on (pod, namespace) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Succeeded"}>0) unless on (pod, namespace) ((kube_pod_status_ready{%(kubeStateMetricsSelector)s, condition="true"}>0) and on (pod, namespace) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Running"}>0)) unless on (pod, namespace) ((kube_pod_container_status_waiting_reason{%(kubeStateMetricsSelector)s, reason="ContainerCreating"}>0) and on (pod, namespace) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Pending"}>0))) by (node)
+              count(kube_pod_info{node!=""} unless on (pod, namespace) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Succeeded"}>0) unless on (pod, namespace) ((kube_pod_status_ready{%(kubeStateMetricsSelector)s, condition="true"}>0) and on (pod, namespace) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Running"}>0)) unless on (pod, namespace) kube_pod_container_status_waiting_reason{%(kubeStateMetricsSelector)s, reason="ContainerCreating"}>0) by (node)
             ||| % $._config,
           },
           {
@@ -290,7 +290,7 @@
           {
             record: 'cluster:pod_abnormal:sum',
             expr: |||
-              count(kube_pod_info unless on (pod, namespace) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Succeeded"}>0) unless on (pod, namespace) ((kube_pod_status_ready{%(kubeStateMetricsSelector)s, condition="true"}>0) and on (pod, namespace) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Running"}>0)) unless on (pod, namespace) ((kube_pod_container_status_waiting_reason{%(kubeStateMetricsSelector)s, reason="ContainerCreating"}>0) and on (pod, namespace) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Pending"}>0)))
+              count(kube_pod_info unless on (pod, namespace) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Succeeded"}>0) unless on (pod, namespace) ((kube_pod_status_ready{%(kubeStateMetricsSelector)s, condition="true"}>0) and on (pod, namespace) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Running"}>0)) unless on (pod, namespace) kube_pod_container_status_waiting_reason{%(kubeStateMetricsSelector)s, reason="ContainerCreating"}>0)
             ||| % $._config,
           },
           {
@@ -349,13 +349,13 @@
           {
             record: 'namespace:pod_abnormal:count',
             expr: |||
-              count(kube_pod_info{node!=""} unless on (pod, namespace) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Succeeded"}>0) unless on (pod, namespace) ((kube_pod_status_ready{%(kubeStateMetricsSelector)s, condition="true"}>0) and on (pod, namespace) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Running"}>0)) unless on (pod, namespace) ((kube_pod_container_status_waiting_reason{%(kubeStateMetricsSelector)s, reason="ContainerCreating"}>0) and on (pod, namespace) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Pending"}>0))) by (namespace)
+              (count(kube_pod_info{node!=""}) by (namespace) - sum(kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Succeeded"}) by (namespace)  - sum(kube_pod_status_ready{%(kubeStateMetricsSelector)s, condition="true"} * on (pod, namespace) kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Running"}) by (namespace) - sum(kube_pod_container_status_waiting_reason{%(kubeStateMetricsSelector)s, reason="ContainerCreating"}) by (namespace)) * on (namespace) group_left(label_kubesphere_io_workspace)(kube_namespace_labels)
             ||| % $._config,
           },
           {
             record: 'namespace:pod_abnormal:ratio',
             expr: |||
-              (namespace:pod_abnormal:count * on (namespace) group_left(label_kubesphere_io_workspace)(kube_namespace_labels)) / (sum(kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase!="Succeeded", namespace!=""}) by (namespace) * on (namespace) group_left(label_kubesphere_io_workspace)(kube_namespace_labels))
+              namespace:pod_abnormal:count / (sum(kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase!="Succeeded", namespace!=""}) by (namespace) * on (namespace) group_left(label_kubesphere_io_workspace)(kube_namespace_labels))
             ||| % $._config,
           },
           {
