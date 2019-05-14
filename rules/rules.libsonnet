@@ -7,19 +7,19 @@
           {
             record: 'namespace:container_cpu_usage_seconds_total:sum_rate',
             expr: |||
-              sum(rate(container_cpu_usage_seconds_total{%(kubeletSelector)s, image!="", container_name!=""}[5m])) by (namespace)
+              sum((container_cpu_usage_seconds_total{%(kubeletSelector)s, image!="", container_name!=""} * on(namespace) group_left(label_kubesphere_io_workspace) kube_namespace_labels{%(kubeStateMetricsSelector)s} - container_cpu_usage_seconds_total{%(kubeletSelector)s, image!="", container_name!=""} offset 90s * on(namespace) group_left(label_kubesphere_io_workspace) kube_namespace_labels{%(kubeStateMetricsSelector)s}) / 90) by (namespace, label_kubesphere_io_workspace)
             ||| % $._config,
           },
           {
             record: 'namespace:container_memory_usage_bytes:sum',
             expr: |||
-              sum(container_memory_usage_bytes{%(kubeletSelector)s, image!="", container_name!=""}) by (namespace)
+              sum(container_memory_usage_bytes{%(kubeletSelector)s, image!="", container_name!=""} * on(namespace) group_left(label_kubesphere_io_workspace) kube_namespace_labels{%(kubeStateMetricsSelector)s}) by (namespace, label_kubesphere_io_workspace)
             ||| % $._config,
           },
           {
             record: 'namespace:container_memory_usage_bytes_wo_cache:sum',
             expr: |||
-              sum(container_memory_usage_bytes{%(kubeletSelector)s, image!="", container_name!=""} - container_memory_cache{%(kubeletSelector)s, image!="", container_name!=""}) by (namespace)
+              sum((container_memory_usage_bytes{%(kubeletSelector)s, image!="", container_name!=""} - container_memory_cache{%(kubeletSelector)s, image!="", container_name!=""}) * on(namespace) group_left(label_kubesphere_io_workspace) kube_namespace_labels{%(kubeStateMetricsSelector)s}) by (namespace, label_kubesphere_io_workspace)
             ||| % $._config,
           },
         ],
