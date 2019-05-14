@@ -715,7 +715,7 @@
           {
             record: 'prometheus:prometheus_tsdb_head_samples_appended:sum_rate',
             expr: |||
-              sum(rate(prometheus_tsdb_head_samples_appended_total{%(prometheusSelector)s} [5m])) by (job)
+              sum(rate(prometheus_tsdb_head_samples_appended_total{%(prometheusSelector)s} [5m])) by (job, pod)
             ||| % $._config,
           },
         ],
