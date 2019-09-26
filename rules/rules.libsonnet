@@ -185,29 +185,13 @@
           {
             record: 'node:node_inodes_total:',
             expr: |||
-              max(
-                max(
-                  kube_pod_info{%(kubeStateMetricsSelector)s, host_ip!=""}
-                ) by (node, host_ip)
-                * on (host_ip) group_right (node)
-                label_replace(
-                  (max(node_filesystem_files{%(nodeExporterSelector)s, %(hostMountpointSelector)s}) by (instance)), "host_ip", "$1", "instance", "(.*):.*"
-                )
-              ) by (node)
+              sum by(node) (sum(max(node_filesystem_files{device=~"/dev/.*", device!~"/dev/loop\\d+", %(nodeExporterSelector)s}) by (device, pod, namespace)) by (pod, namespace) * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:)
             ||| % $._config,
           },
           {
             record: 'node:node_inodes_free:',
             expr: |||
-              max(
-                max(
-                  kube_pod_info{%(kubeStateMetricsSelector)s, host_ip!=""}
-                ) by (node, host_ip)
-                * on (host_ip) group_right (node)
-                label_replace(
-                  (max(node_filesystem_files_free{%(nodeExporterSelector)s, %(hostMountpointSelector)s}) by (instance)), "host_ip", "$1", "instance", "(.*):.*"
-                )
-              ) by (node)
+              sum by(node) (sum(max(node_filesystem_files_free{device=~"/dev/.*", device!~"/dev/loop\\d+", %(nodeExporterSelector)s}) by (device, pod, namespace)) by (pod, namespace) * on (namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:)
             ||| % $._config,
           },
           {
