@@ -78,7 +78,7 @@
             record: 'node:node_memory_bytes_available:sum',
             expr: |||
               sum by (node) (
-                (node_memory_MemFree_bytes{%(nodeExporterSelector)s} + node_memory_Cached_bytes{%(nodeExporterSelector)s} + node_memory_Buffers_bytes{%(nodeExporterSelector)s})
+                (node_memory_MemFree_bytes{%(nodeExporterSelector)s} + node_memory_Cached_bytes{%(nodeExporterSelector)s} + node_memory_Buffers_bytes{%(nodeExporterSelector)s} + node_memory_SReclaimable_bytes{%(nodeExporterSelector)s})
                 * on (namespace, %(podLabel)s) group_left(node)
                   node_namespace_pod:kube_pod_info:
               )
