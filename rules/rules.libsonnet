@@ -67,7 +67,7 @@
             record: ':node_memory_utilisation:',
             expr: |||
               1 -
-              sum(node_memory_MemFree_bytes{%(nodeExporterSelector)s} + node_memory_Cached_bytes{%(nodeExporterSelector)s} + node_memory_Buffers_bytes{%(nodeExporterSelector)s})
+              sum(node_memory_MemFree_bytes{%(nodeExporterSelector)s} + node_memory_Cached_bytes{%(nodeExporterSelector)s} + node_memory_Buffers_bytes{%(nodeExporterSelector)s} + node_memory_SReclaimable_bytes{%(nodeExporterSelector)s})
               /
               sum(node_memory_MemTotal_bytes{%(nodeExporterSelector)s})
             ||| % $._config,
