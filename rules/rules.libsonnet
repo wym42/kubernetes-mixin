@@ -215,7 +215,7 @@
           {
             record: 'node:pod_count:sum',
             expr: |||
-              sum by (node) ((kube_pod_status_scheduled{%(kubeStateMetricsSelector)s, condition="true"} > 0)  * on (namespace, pod) group_left(node) kube_pod_info unless on (node) (kube_node_status_condition{%(kubeStateMetricsSelector)s, condition="Ready", status=~"unknown|false"} > 0))
+              sum by (node) ((kube_pod_status_scheduled{%(kubeStateMetricsSelector)s, condition="true"} > 0)  * on (namespace, pod) group_left(node) kube_pod_info{%(kubeStateMetricsSelector)s} unless on (node) (kube_node_status_condition{%(kubeStateMetricsSelector)s, condition="Ready", status=~"unknown|false"} > 0))
             ||| % $._config,
           },
           {
@@ -227,25 +227,25 @@
           {
             record: 'node:pod_running:count',
             expr: |||
-              count(kube_pod_info unless on (pod, namespace) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase=~"Failed|Pending|Unknown|Succeeded"} > 0))  by (node) unless on (node) (kube_node_status_condition{%(kubeStateMetricsSelector)s, condition="Ready", status=~"unknown|false"} > 0)
+              count(kube_pod_info{%(kubeStateMetricsSelector)s} unless on (pod, namespace) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase=~"Failed|Pending|Unknown|Succeeded"} > 0))  by (node) unless on (node) (kube_node_status_condition{%(kubeStateMetricsSelector)s, condition="Ready", status=~"unknown|false"} > 0)
             ||| % $._config,
           },
           {
             record: 'node:pod_succeeded:count',
             expr: |||
-              count(kube_pod_info unless on (pod, namespace) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase=~"Failed|Pending|Unknown|Running"} > 0))  by (node) unless on (node) (kube_node_status_condition{%(kubeStateMetricsSelector)s, condition="Ready",status=~"unknown|false"} > 0)
+              count(kube_pod_info{%(kubeStateMetricsSelector)s} unless on (pod, namespace) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase=~"Failed|Pending|Unknown|Running"} > 0))  by (node) unless on (node) (kube_node_status_condition{%(kubeStateMetricsSelector)s, condition="Ready",status=~"unknown|false"} > 0)
             ||| % $._config,
           },
           {
             record: 'node:pod_abnormal:count',
             expr: |||
-              count(kube_pod_info{node!=""} unless on (pod, namespace) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Succeeded"}>0) unless on (pod, namespace) ((kube_pod_status_ready{%(kubeStateMetricsSelector)s, condition="true"}>0) and on (pod, namespace) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Running"}>0)) unless on (pod, namespace) kube_pod_container_status_waiting_reason{%(kubeStateMetricsSelector)s, reason="ContainerCreating"}>0) by (node)
+              count(kube_pod_info{%(kubeStateMetricsSelector)s, node!=""} unless on (pod, namespace) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Succeeded"}>0) unless on (pod, namespace) ((kube_pod_status_ready{%(kubeStateMetricsSelector)s, condition="true"}>0) and on (pod, namespace) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Running"}>0)) unless on (pod, namespace) kube_pod_container_status_waiting_reason{%(kubeStateMetricsSelector)s, reason="ContainerCreating"}>0) by (node)
             ||| % $._config,
           },
           {
             record: 'node:pod_abnormal:ratio',
             expr: |||
-              (node:pod_abnormal:count / count(kube_pod_info{node!=""} unless on (pod, namespace) kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Succeeded"}>0) by (node)) unless on (node) (kube_node_status_condition{%(kubeStateMetricsSelector)s, condition="Ready", status=~"unknown|false"} > 0)
+              (node:pod_abnormal:count / count(kube_pod_info{%(kubeStateMetricsSelector)s, node!=""} unless on (pod, namespace) kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Succeeded"}>0) by (node)) unless on (node) (kube_node_status_condition{%(kubeStateMetricsSelector)s, condition="Ready", status=~"unknown|false"} > 0)
             ||| % $._config,
           },
           {
@@ -274,7 +274,7 @@
           {
             record: 'cluster:pod_abnormal:sum',
             expr: |||
-              count(kube_pod_info unless on (pod, namespace) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Succeeded"}>0) unless on (pod, namespace) ((kube_pod_status_ready{%(kubeStateMetricsSelector)s, condition="true"}>0) and on (pod, namespace) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Running"}>0)) unless on (pod, namespace) kube_pod_container_status_waiting_reason{%(kubeStateMetricsSelector)s, reason="ContainerCreating"}>0)
+              count(kube_pod_info{%(kubeStateMetricsSelector)s} unless on (pod, namespace) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Succeeded"}>0) unless on (pod, namespace) ((kube_pod_status_ready{%(kubeStateMetricsSelector)s, condition="true"}>0) and on (pod, namespace) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Running"}>0)) unless on (pod, namespace) kube_pod_container_status_waiting_reason{%(kubeStateMetricsSelector)s, reason="ContainerCreating"}>0)
             ||| % $._config,
           },
           {
@@ -292,7 +292,7 @@
           {
             record: 'cluster:pod_running:count',
             expr: |||
-              count(kube_pod_info and on (pod, namespace) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Running"}>0) unless on (node) (kube_node_status_condition{%(kubeStateMetricsSelector)s, condition="Ready", status=~"unknown|false"} > 0))
+              count(kube_pod_info{%(kubeStateMetricsSelector)s} and on (pod, namespace) (kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Running"}>0) unless on (node) (kube_node_status_condition{%(kubeStateMetricsSelector)s, condition="Ready", status=~"unknown|false"} > 0))
             ||| % $._config,
           },
           {
@@ -333,67 +333,67 @@
           {
             record: 'namespace:pod_abnormal:count',
             expr: |||
-              (count(kube_pod_info{node!=""}) by (namespace) - sum(kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Succeeded"}) by (namespace)  - sum(kube_pod_status_ready{%(kubeStateMetricsSelector)s, condition="true"} * on (pod, namespace) kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Running"}) by (namespace) - sum(kube_pod_container_status_waiting_reason{%(kubeStateMetricsSelector)s, reason="ContainerCreating"}) by (namespace)) * on (namespace) group_left(label_kubesphere_io_workspace)(kube_namespace_labels)
+              (count(kube_pod_info{%(kubeStateMetricsSelector)s, node!=""}) by (namespace) - sum(kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Succeeded"}) by (namespace)  - sum(kube_pod_status_ready{%(kubeStateMetricsSelector)s, condition="true"} * on (pod, namespace) kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase="Running"}) by (namespace) - sum(kube_pod_container_status_waiting_reason{%(kubeStateMetricsSelector)s, reason="ContainerCreating"}) by (namespace)) * on (namespace) group_left(label_kubesphere_io_workspace)(kube_namespace_labels{%(kubeStateMetricsSelector)s})
             ||| % $._config,
           },
           {
             record: 'namespace:pod_abnormal:ratio',
             expr: |||
-              namespace:pod_abnormal:count / (sum(kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase!="Succeeded", namespace!=""}) by (namespace) * on (namespace) group_left(label_kubesphere_io_workspace)(kube_namespace_labels))
+              namespace:pod_abnormal:count / (sum(kube_pod_status_phase{%(kubeStateMetricsSelector)s, phase!="Succeeded", namespace!=""}) by (namespace) * on (namespace) group_left(label_kubesphere_io_workspace)(kube_namespace_labels{%(kubeStateMetricsSelector)s}))
             ||| % $._config,
           },
           {
             record: 'namespace:resourcequota_used:ratio',
             expr: |||
-              max(kube_resourcequota{%(kubeStateMetricsSelector)s, type="used"}) by (resource, namespace) / min(kube_resourcequota{%(kubeStateMetricsSelector)s, type="hard"}) by (resource, namespace) *  on (namespace) group_left(label_kubesphere_io_workspace) (kube_namespace_labels)
+              max(kube_resourcequota{%(kubeStateMetricsSelector)s, type="used"}) by (resource, namespace) / min(kube_resourcequota{%(kubeStateMetricsSelector)s, type="hard"}) by (resource, namespace) *  on (namespace) group_left(label_kubesphere_io_workspace) (kube_namespace_labels{%(kubeStateMetricsSelector)s})
             ||| % $._config,
           },
           {
             record: 'namespace:workload_cpu_usage:sum',
             expr: |||
-              sum (label_replace(label_join(sum(irate(container_cpu_usage_seconds_total{%(kubeletSelector)s, pod_name!="", image!=""}[5m])) by (namespace, pod_name) * on (pod_name) group_left(owner_kind,owner_name) label_join(label_replace(label_join(label_replace(label_replace(kube_pod_owner,"owner_kind", "Deployment", "owner_kind", "ReplicaSet"), "owner_kind", "Pod", "owner_kind", "<none>"),"tmp",":","owner_name","pod"),"owner_name","$1","tmp","<none>:(.*)"), "pod_name", "", "pod", "_name"), "workload",":","owner_kind","owner_name"), "workload","$1","workload","(Deployment:.+)-(.+)")) by (namespace, workload, owner_kind)
+              sum (label_replace(label_join(sum(irate(container_cpu_usage_seconds_total{%(kubeletSelector)s, pod_name!="", image!=""}[5m])) by (namespace, pod_name) * on (pod_name, namespace) group_left(owner_kind,owner_name) label_join(label_replace(label_join(label_replace(label_replace(kube_pod_owner{%(kubeStateMetricsSelector)s},"owner_kind", "Deployment", "owner_kind", "ReplicaSet"), "owner_kind", "Pod", "owner_kind", "<none>"),"tmp",":","owner_name","pod"),"owner_name","$1","tmp","<none>:(.*)"), "pod_name", "", "pod", "_name"), "workload",":","owner_kind","owner_name"), "workload","$1","workload","(Deployment:.+)-(.+)")) by (namespace, workload, owner_kind)
             ||| % $._config,
           },
           {
             record: 'namespace:workload_memory_usage:sum',
             expr: |||
-              sum (label_replace(label_join(sum(container_memory_usage_bytes{%(kubeletSelector)s, pod_name!="", image!=""}) by (namespace, pod_name) * on (pod_name) group_left(owner_kind,owner_name) label_join(label_replace(label_join(label_replace(label_replace(kube_pod_owner,"owner_kind", "Deployment", "owner_kind", "ReplicaSet"), "owner_kind", "Pod", "owner_kind", "<none>"),"tmp",":","owner_name","pod"),"owner_name","$1","tmp","<none>:(.*)"), "pod_name", "", "pod", "_name"), "workload",":","owner_kind","owner_name"), "workload","$1","workload","(Deployment:.+)-(.+)")) by (namespace, workload, owner_kind)
+              sum (label_replace(label_join(sum(container_memory_usage_bytes{%(kubeletSelector)s, pod_name!="", image!=""}) by (namespace, pod_name) * on (pod_name, namespace) group_left(owner_kind,owner_name) label_join(label_replace(label_join(label_replace(label_replace(kube_pod_owner{%(kubeStateMetricsSelector)s},"owner_kind", "Deployment", "owner_kind", "ReplicaSet"), "owner_kind", "Pod", "owner_kind", "<none>"),"tmp",":","owner_name","pod"),"owner_name","$1","tmp","<none>:(.*)"), "pod_name", "", "pod", "_name"), "workload",":","owner_kind","owner_name"), "workload","$1","workload","(Deployment:.+)-(.+)")) by (namespace, workload, owner_kind)
             ||| % $._config,
           },
           {
             record: 'namespace:workload_memory_usage_wo_cache:sum',
             expr: |||
-              sum (label_replace(label_join(sum(container_memory_usage_bytes{%(kubeletSelector)s, pod_name!="", image!=""} - container_memory_cache{%(kubeletSelector)s, pod_name!="", image!=""}) by (namespace, pod_name) * on (pod_name) group_left(owner_kind,owner_name) label_join(label_replace(label_join(label_replace(label_replace(kube_pod_owner,"owner_kind", "Deployment", "owner_kind", "ReplicaSet"), "owner_kind", "Pod", "owner_kind", "<none>"),"tmp",":","owner_name","pod"),"owner_name","$1","tmp","<none>:(.*)"), "pod_name", "", "pod", "_name"), "workload",":","owner_kind","owner_name"), "workload","$1","workload","(Deployment:.+)-(.+)")) by (namespace, workload, owner_kind)
+              sum (label_replace(label_join(sum(container_memory_usage_bytes{%(kubeletSelector)s, pod_name!="", image!=""} - container_memory_cache{%(kubeletSelector)s, pod_name!="", image!=""}) by (namespace, pod_name) * on (pod_name, namespace) group_left(owner_kind,owner_name) label_join(label_replace(label_join(label_replace(label_replace(kube_pod_owner{%(kubeStateMetricsSelector)s},"owner_kind", "Deployment", "owner_kind", "ReplicaSet"), "owner_kind", "Pod", "owner_kind", "<none>"),"tmp",":","owner_name","pod"),"owner_name","$1","tmp","<none>:(.*)"), "pod_name", "", "pod", "_name"), "workload",":","owner_kind","owner_name"), "workload","$1","workload","(Deployment:.+)-(.+)")) by (namespace, workload, owner_kind)
             ||| % $._config,
           },
           {
             record: 'namespace:workload_net_bytes_transmitted:sum_irate',
             expr: |||
-              sum (label_replace(label_join(sum(irate(container_network_transmit_bytes_total{pod_name!="", interface!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)", %(kubeletSelector)s}[5m])) by (namespace, pod_name) * on (pod_name) group_left(owner_kind,owner_name) label_join(label_replace(label_join(label_replace(label_replace(kube_pod_owner,"owner_kind", "Deployment", "owner_kind", "ReplicaSet"), "owner_kind", "Pod", "owner_kind", "<none>"),"tmp",":","owner_name","pod"),"owner_name","$1","tmp","<none>:(.*)"), "pod_name", "", "pod", "_name"), "workload",":","owner_kind","owner_name"), "workload","$1","workload","(Deployment:.+)-(.+)")) by (namespace, workload, owner_kind)
+              sum (label_replace(label_join(sum(irate(container_network_transmit_bytes_total{pod_name!="", interface!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)", %(kubeletSelector)s}[5m])) by (namespace, pod_name) * on (pod_name, namespace) group_left(owner_kind,owner_name) label_join(label_replace(label_join(label_replace(label_replace(kube_pod_owner{%(kubeStateMetricsSelector)s},"owner_kind", "Deployment", "owner_kind", "ReplicaSet"), "owner_kind", "Pod", "owner_kind", "<none>"),"tmp",":","owner_name","pod"),"owner_name","$1","tmp","<none>:(.*)"), "pod_name", "", "pod", "_name"), "workload",":","owner_kind","owner_name"), "workload","$1","workload","(Deployment:.+)-(.+)")) by (namespace, workload, owner_kind)
             ||| % $._config,
           },
           {
             record: 'namespace:workload_net_bytes_received:sum_irate',
             expr: |||
-              sum (label_replace(label_join(sum(irate(container_network_receive_bytes_total{pod_name!="", interface!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)", %(kubeletSelector)s}[5m])) by (namespace, pod_name) * on (pod_name) group_left(owner_kind,owner_name) label_join(label_replace(label_join(label_replace(label_replace(kube_pod_owner,"owner_kind", "Deployment", "owner_kind", "ReplicaSet"), "owner_kind", "Pod", "owner_kind", "<none>"),"tmp",":","owner_name","pod"),"owner_name","$1","tmp","<none>:(.*)"), "pod_name", "", "pod", "_name"), "workload",":","owner_kind","owner_name"), "workload","$1","workload","(Deployment:.+)-(.+)")) by (namespace, workload, owner_kind)
+              sum (label_replace(label_join(sum(irate(container_network_receive_bytes_total{pod_name!="", interface!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)", %(kubeletSelector)s}[5m])) by (namespace, pod_name) * on (pod_name, namespace) group_left(owner_kind,owner_name) label_join(label_replace(label_join(label_replace(label_replace(kube_pod_owner{%(kubeStateMetricsSelector)s},"owner_kind", "Deployment", "owner_kind", "ReplicaSet"), "owner_kind", "Pod", "owner_kind", "<none>"),"tmp",":","owner_name","pod"),"owner_name","$1","tmp","<none>:(.*)"), "pod_name", "", "pod", "_name"), "workload",":","owner_kind","owner_name"), "workload","$1","workload","(Deployment:.+)-(.+)")) by (namespace, workload, owner_kind)
             ||| % $._config,
           },
           {
             record: 'namespace:deployment_unavailable_replicas:ratio',
             expr: |||
-              label_replace(label_replace(sum(kube_deployment_status_replicas_unavailable{%(kubeStateMetricsSelector)s}) by (deployment, namespace) / sum(kube_deployment_spec_replicas{%(kubeStateMetricsSelector)s}) by (deployment, namespace) * on (namespace) group_left(label_kubesphere_io_workspace)(kube_namespace_labels), "workload","Deployment:$1", "deployment", "(.*)"), "owner_kind","Deployment", "", "")
+              label_replace(label_replace(sum(kube_deployment_status_replicas_unavailable{%(kubeStateMetricsSelector)s}) by (deployment, namespace) / sum(kube_deployment_spec_replicas{%(kubeStateMetricsSelector)s}) by (deployment, namespace) * on (namespace) group_left(label_kubesphere_io_workspace)(kube_namespace_labels{%(kubeStateMetricsSelector)s}), "workload","Deployment:$1", "deployment", "(.*)"), "owner_kind","Deployment", "", "")
             ||| % $._config,
           },
           {
             record: 'namespace:daemonset_unavailable_replicas:ratio',
             expr: |||
-              label_replace(label_replace(sum(kube_daemonset_status_number_unavailable{%(kubeStateMetricsSelector)s}) by (daemonset, namespace) / sum(kube_daemonset_status_desired_number_scheduled{%(kubeStateMetricsSelector)s}) by (daemonset, namespace) * on (namespace) group_left(label_kubesphere_io_workspace)(kube_namespace_labels) , "workload","DaemonSet:$1", "daemonset", "(.*)"), "owner_kind","DaemonSet", "", "")
+              label_replace(label_replace(sum(kube_daemonset_status_number_unavailable{%(kubeStateMetricsSelector)s}) by (daemonset, namespace) / sum(kube_daemonset_status_desired_number_scheduled{%(kubeStateMetricsSelector)s}) by (daemonset, namespace) * on (namespace) group_left(label_kubesphere_io_workspace)(kube_namespace_labels{%(kubeStateMetricsSelector)s}) , "workload","DaemonSet:$1", "daemonset", "(.*)"), "owner_kind","DaemonSet", "", "")
             ||| % $._config,
           },
           {
             record: 'namespace:statefulset_unavailable_replicas:ratio',
             expr: |||
-              label_replace(label_replace((1 - sum(kube_statefulset_status_replicas_current{%(kubeStateMetricsSelector)s}) by (statefulset, namespace) / sum(kube_statefulset_replicas{%(kubeStateMetricsSelector)s}) by (statefulset, namespace)) * on (namespace) group_left(label_kubesphere_io_workspace)(kube_namespace_labels) , "workload","StatefulSet:$1", "statefulset", "(.*)"), "owner_kind","StatefulSet", "", "")
+              label_replace(label_replace((1 - sum(kube_statefulset_status_replicas_current{%(kubeStateMetricsSelector)s}) by (statefulset, namespace) / sum(kube_statefulset_replicas{%(kubeStateMetricsSelector)s}) by (statefulset, namespace)) * on (namespace) group_left(label_kubesphere_io_workspace)(kube_namespace_labels{%(kubeStateMetricsSelector)s}) , "workload","StatefulSet:$1", "statefulset", "(.*)"), "owner_kind","StatefulSet", "", "")
             ||| % $._config,
           },
         ],
@@ -618,13 +618,13 @@
           {
             record: 'coredns:coredns_cache_hits_total:sum_irate',
             expr: |||
-              sum(irate(coredns_cache_hits_total[5m]))
+              sum(irate(coredns_cache_hits_total{%(kubeCoreDNSSelector)s}[5m]))
             ||| % $._config,
           },
           {
             record: 'coredns:coredns_cache_misses:sum_irate',
             expr: |||
-              sum(irate(coredns_cache_misses[5m]))
+              sum(irate(coredns_cache_misses{%(kubeCoreDNSSelector)s}[5m]))
             ||| % $._config,
           },
           {
@@ -636,19 +636,19 @@
           {
             record: 'coredns:coredns_dns_request_type_count:sum_irate',
             expr: |||
-              sum(irate(coredns_dns_request_type_count_total[5m])) by (type)
+              sum(irate(coredns_dns_request_type_count_total{%(kubeCoreDNSSelector)s}[5m])) by (type)
             ||| % $._config,
           },
           {
             record: 'coredns:coredns_dns_response_rcode_count:sum_irate',
             expr: |||
-              sum(irate(coredns_dns_response_rcode_count_total[5m])) by (rcode)
+              sum(irate(coredns_dns_response_rcode_count_total{%(kubeCoreDNSSelector)s}[5m])) by (rcode)
             ||| % $._config,
           },
           {
             record: 'coredns:coredns_panic_count:sum_irate',
             expr: |||
-              sum(irate(coredns_panic_count_total[5m]))
+              sum(irate(coredns_panic_count_total{%(kubeCoreDNSSelector)s}[5m]))
             ||| % $._config,
           },
           {
